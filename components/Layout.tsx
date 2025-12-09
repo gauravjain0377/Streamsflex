@@ -39,7 +39,7 @@ export const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) =>
   const location = useLocation();
 
   return (
-    <div className="min-h-screen flex bg-dark text-slate-100">
+    <div className="min-h-screen flex bg-gradient-to-br from-neutral-950 via-zinc-900 to-neutral-950 text-slate-100">
       {/* Mobile Header */}
       <div className="lg:hidden fixed top-0 w-full bg-card/80 backdrop-blur-md border-b border-slate-800 z-50 flex items-center justify-between p-4">
         <div className="flex items-center space-x-2">

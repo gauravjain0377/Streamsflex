@@ -1,88 +1,109 @@
 ## Streamsflex
 
-Streamsflex is a modern, creator‑first video streaming platform that lets you upload long‑form videos once and deliver them everywhere – desktop, tablet and mobile – with a smooth, YouTube‑style viewing experience.
+Premium, responsive, and creator‑focused video streaming platform — built with React, Node.js, MongoDB, and ImageKit.
 
-Built for small teams and individual creators, it turns raw video files into shareable, branded experiences with automatic thumbnails, watch analytics, likes, and a focused admin dashboard – without asking you to manage heavy video infrastructure yourself.
-
-This repository contains both the **React/Vite frontend** and the **Node.js/Express + MongoDB API**, wired together to behave like a single, production‑ready product.
+Streamsflex lets you upload long‑form videos once and deliver them seamlessly across desktop, tablet, and mobile with a YouTube‑style experience: custom player, instant thumbnails, watch analytics, likes, and a focused admin dashboard. The project is structured as a single repository containing both the **frontend (Vite + React + TypeScript)** and the **backend (Express + MongoDB + ImageKit)** so it can be developed and deployed end‑to‑end with minimal friction.
 
 ---
 
-### Table of contents
+### Table of Contents
 
-- **[1. Core product capabilities](#1-core-product-capabilities)**
-- **[2. Tech stack](#2-tech-stack)**
-- **[3. Project structure](#3-project-structure)**
-- **[4. Backend API](#4-backend-api-serverindexjs)**
-- **[5. Environment variables](#5-environment-variables)**
-- **[6. Running locally](#6-running-locally)**
-- **[7. Deployment setup](#7-deployment-setup)**
-- **[8. Usage guide](#8-usage-guide)**
-- **[9. Notes about imagekit video processing units](#9-notes-about-imagekit-video-processing-units)**
-- **[10. Scripts](#10-scripts)**
-- **[11. Future improvements](#11-future-improvements-ideas)**
+- **[About](#about)**
+- **[Features](#features)**
+- **[Tech Stack](#tech-stack)**
+- **[Screenshots](#screenshots)**
+- **[Folder Structure](#folder-structure)**
+- **[Installation](#installation)**
+- **[Environment Variables](#environment-variables)**
+- **[Running](#running)**
+- **[API Overview](#api-overview)**
+- **[Contributing](#contributing)**
+- **[License](#license)**
+- **[Contact](#contact)**
+- **[Future Enhancements](#future-enhancements)**
 
 ---
 
-## 1. Core product capabilities
+## About
 
-- **Video upload**
-  - Uploads video files from the browser.
-  - Optional custom thumbnail image upload.
-  - If no thumbnail is uploaded, ImageKit’s **first-frame thumbnail** is used.
-  - Only **links** (URL to video + thumbnail) and metadata are stored in MongoDB.
+Streamsflex is designed for creators and small teams who want to host and share their own video content without building a full video platform from scratch.
 
-- **Playback**
-  - Custom `VideoPlayer` component with:
-    - Play / pause (center click and bottom button)
-    - Always-visible timeline and scrubber
-    - Volume control
-    - Playback speed (0.5x, 1x, 1.5x, 2x)
-    - Fullscreen toggle (enter and exit)
-  - Device-aware layout:
-    - Desktop, tablet and mobile aspect ratios and sizing.
+Instead of dealing with raw file storage, transcoding pipelines, and analytics by hand, you:
 
-- **Analytics**
-  - **Views** counted per video.
-  - **Device breakdown**: desktop, tablet, mobile.
-  - **Duration** stored in DB after first watch (so length shows on cards).
-  - Used by the **Admin dashboard** for dynamic stats.
+- Upload a video (and optionally a thumbnail),
+- Let ImageKit handle storage and thumbnails,
+- Track real‑time views, devices, likes, and duration in MongoDB,
+- Share clean, stable watch links with your audience,
+- Monitor performance from an integrated admin dashboard.
 
-- **Likes**
-  - Any user can like a video.
-  - Likes are stored in MongoDB and visible to everyone.
+The goal is a product‑grade experience that feels familiar to users (similar to YouTube) but runs entirely on your own stack and database.
 
-- **Sharing**
-  - Each video has a **watch link**:  
-    `https://your-frontend.com/#/watch/:id`
+---
+
+## Features
+
+- **Creator‑ready video uploads**
+  - Upload videos directly from the browser using a polished upload flow.
+  - Optional thumbnail upload; if none is provided, the first frame is used via ImageKit.
+  - Only URLs and metadata are stored in MongoDB – no large files in your database.
+
+- **Modern playback experience**
+  - Custom `VideoPlayer` with:
+    - Center and bottom play/pause controls.
+    - Always‑visible timeline and seek bar.
+    - Volume slider and playback speed controls (0.5x–2x).
+    - Fullscreen toggle (enter and exit with the same button).
+  - Responsive layout that adapts intelligently to desktop, tablet, and mobile.
+
+- **Engagement & analytics**
+  - View counts persisted per video.
+  - Device breakdown (desktop / tablet / mobile) for each view.
+  - Video duration captured from the player and written back to MongoDB.
+  - Likes stored in the database and reflected instantly on the UI.
+
+- **Sharing & social distribution**
+  - Stable watch URLs in the format: `#/watch/:id`.
   - Share modal with:
-    - System/native share (on supported devices).
-    - Prebuilt links for **WhatsApp** and **X (Twitter)**.
-    - “Copy link” button.
+    - Native share support (where available).
+    - One‑click links for WhatsApp and X (Twitter).
+    - “Copy link” to share anywhere.
+
+- **Admin dashboard**
+  - High‑level view of platform performance:
+    - Total views and device mix.
+    - Per‑video metrics driven entirely by live MongoDB data.
+
+- **Deployment‑friendly architecture**
+  - Frontend optimized for static hosting (e.g. Vercel).
+  - Backend ready for Node hosts (e.g. Render).
+  - Clean separation using `VITE_API_BASE_URL` so the frontend can talk to any API base.
 
 ---
 
-## 2. Tech stack
+## Tech Stack
 
 - **Frontend**
-  - Vite + React + TypeScript
-  - Tailwind-style utility classes (via your styling setup)
-  - React Router (pages like `Home`, `Upload`, `Watch`, `Admin`)
-  - Context-based state:
-    - `VideoContext` for videos, views, likes, etc.
-    - `DeviceContext` for desktop/tablet/mobile detection
+  - React + TypeScript (Vite)
+  - React Router (`Home`, `Upload`, `Watch`, `Admin`)
+  - Utility‑first styling (Tailwind‑style classes)
+  - Context providers:
+    - `VideoContext` for video list, views, likes, and updates
+    - `DeviceContext` for responsive behavior (desktop / tablet / mobile)
 
 - **Backend**
-  - Node.js + Express
-  - MongoDB (via Mongoose)
-  - ImageKit Node SDK
-  - Multer (in-memory) for multipart form uploads
+  - Node.js + Express (`server/index.js`)
+  - MongoDB with Mongoose (`Video` schema + analytics)
+  - Multer (in‑memory) for `multipart/form-data` uploads
+  - ImageKit Node SDK for video + thumbnail storage
+
+- **Tooling**
+  - Vite dev server and build pipeline
+  - TypeScript via `tsconfig.json`
+  - Environment‑driven configuration (`.env`, `VITE_API_BASE_URL`)
 
 ---
 
-## 3. Project structure
-
-Overall layout of the repository:
+## Folder Structure
 
 ```text
 Streamsflex/
@@ -104,9 +125,9 @@ Streamsflex/
 │
 ├─ utils/
 │  ├─ api.ts              # API base URL helper (VITE_API_BASE_URL aware)
-│  └─ deviceUtils.ts      # Device + aspect ratio utilities
+│  └─ deviceUtils.ts      # Device utilities and aspect‑ratio helpers
 │
-├─ App.tsx                # Application shell and route wiring
+├─ App.tsx                # Application shell and routing
 ├─ index.tsx              # React entrypoint
 ├─ types.ts               # Shared TypeScript types (Video, DeviceType, etc.)
 ├─ constants.ts           # UI constants and breakpoints
@@ -116,112 +137,32 @@ Streamsflex/
 
 ---
 
-## 4. Backend API (server/index.js)
+## Installation
 
-Base URL depends on environment:
+- **Prerequisites**
+  - Node.js 18+ (LTS recommended)
+  - npm
+  - MongoDB instance (Atlas or self‑hosted)
+  - ImageKit account (for video + thumbnail storage)
 
-- **Local dev**: `http://localhost:5000`
-- **Render (production)**: e.g. `https://streamsflex.onrender.com`
+- **Clone**
 
-### 4.1 Health check
+```bash
+git clone https://github.com/gauravjain0377/Streamsflex.git
+cd Streamsflex
+```
 
-- **GET** `/api/health`  
-  Returns `{ status: "ok" }` if the API server is up.
+- **Install dependencies (single root project)**
 
-### 4.2 Get all videos
-
-- **GET** `/api/videos`
-- **Response**: JSON array of video objects:
-
-Fields (simplified):
-
-- `_id: string`
-- `title: string`
-- `description: string`
-- `originalUrl: string` – ImageKit video URL.
-- `thumbnailUrl: string` – ImageKit thumbnail URL.
-- `uploadedBy: string`
-- `createdAt: string`
-- `duration: number` – in seconds.
-- `size: number` – in bytes.
-- `likes: number`
-- `analytics: { views: number, devices: { desktop, tablet, mobile }, watchTime: number }`
-
-### 4.3 Upload video
-
-- **POST** `/api/videos`
-- **Content-Type**: `multipart/form-data`
-- **Fields**:
-  - `video` – required, the video file.
-  - `thumbnail` – optional, an image file.
-  - `title` – required string.
-  - `description` – required string.
-  - `uploader` – optional string (who uploaded).
-
-**Behavior:**
-
-- Uses Multer in-memory storage to accept the files.
-- Uploads video to ImageKit (folder: `/streamflex/videos`).
-- If thumbnail is provided:
-  - Uploads the thumbnail image to ImageKit (folder: `/streamflex/thumbnails`).
-- If thumbnail is **not** provided:
-  - Uses ImageKit’s first-frame thumbnail convention:  
-    `thumbnailUrl = videoUploadResponse.url + "/ik-thumbnail.jpg"`.
-- Saves a new `Video` document in MongoDB with:
-  - `title`, `description`, `originalUrl`, `thumbnailUrl`,
-  - `uploadedBy`, `size`, `duration=0` initially, `likes=0`, analytics defaults.
-
-### 4.4 Increment view
-
-- **POST** `/api/videos/:id/view`
-- **Body (JSON)**:
-  - `device: "desktop" | "tablet" | "mobile"`
-
-**Behavior:**
-
-- Finds video by `id`.
-- Increments:
-  - `analytics.views`
-  - `analytics.devices[device]`.
-- Returns updated video.
-
-### 4.5 Update duration
-
-- **POST** `/api/videos/:id/duration`
-- **Body (JSON)**:
-  - `duration: number` (seconds)
-
-**Behavior:**
-
-- Validates and rounds the duration.
-- Updates `video.duration`.
-- Returns updated video.
-
-Used by `Watch.tsx` when the player first knows the exact duration.
-
-### 4.6 Like a video
-
-- **POST** `/api/videos/:id/like`
-
-**Behavior:**
-
-- Finds video by `id`.
-- Increments `likes` by 1.
-- Returns updated video.
-
-### 4.7 Root route
-
-- **GET** `/`
-  - Returns simple text: `"Streamsflex API is running"`.
-  - Useful on Render to confirm your API is live.
+```bash
+npm install
+```
 
 ---
 
-## 5. Environment variables
+## Environment Variables
 
-### 5.1 Backend (.env for `server/index.js`)
-
-Create a `.env` file in the project root (Render will set these in its dashboard):
+### Backend (`.env` at project root, used by `server/index.js`)
 
 ```env
 PORT=5000
@@ -233,154 +174,139 @@ IMAGEKIT_PRIVATE_KEY=your-imagekit-private-key
 IMAGEKIT_URL_ENDPOINT=https://ik.imagekit.io/your_imagekit_id
 ```
 
-Notes:
+- **`MONGODB_URI`** – MongoDB Atlas or local connection string.
+- **`IMAGEKIT_*`** – Keys and URL endpoint from the ImageKit dashboard.
+- **`PORT`** – Optional; defaults to `5000`.
 
-- `MONGODB_URI` – from MongoDB Atlas or your Mongo instance.
-- `IMAGEKIT_*` – from your ImageKit dashboard.
-
-### 5.2 Frontend (Vite env)
-
-For **local development**, create `.env.local` in the root:
+### Frontend (Vite, e.g. `.env.local`)
 
 ```env
 VITE_API_BASE_URL=http://localhost:5000
 ```
 
-For **Vercel deployment (production)**, set in **Vercel project settings → Environment Variables**:
+- In development, point this to your local backend.
+- In production, set it to your deployed API, e.g. `https://streamsflex.onrender.com`.
 
-```text
-VITE_API_BASE_URL = https://your-backend.onrender.com
-```
-
-Vite (and the helper `apiUrl` in `utils/api.ts`) will then build all API URLs using this base.
+The helper `apiUrl` in `utils/api.ts` uses this value for all network requests.
 
 ---
 
-## 6. Running locally
+## Running
 
-### 6.1 Prerequisites
+### Local development
 
-- Node.js (LTS recommended; project was tested around Node 18+ / 20+).
-- MongoDB Atlas connection (or local Mongo instance).
-- ImageKit account and keys.
+1. **Start the backend**
 
-### 6.2 Install dependencies
+   ```bash
+   npm run server
+   ```
 
-From project root:
+   - Runs `node server/index.js`.
+   - Verify with `http://localhost:5000/api/health` → `{ "status": "ok" }`.
 
-```bash
-npm install
-```
+2. **Start the frontend**
 
-### 6.3 Start backend (Express API)
+   In a second terminal:
 
-Make sure `.env` is configured, then:
+   ```bash
+   npm run dev
+   ```
 
-```bash
-npm run server
-```
+   - Vite starts on `http://localhost:5173` (or similar).
+   - Ensure `VITE_API_BASE_URL=http://localhost:5000`.
 
-This runs `node server/index.js` and listens on `PORT` (default `5000`).
 
-Check:
+In hosted environments, deploy:
 
-- `http://localhost:5000/api/health` → `{ "status": "ok" }`
-
-### 6.4 Start frontend (Vite dev server)
-
-In another terminal:
-
-```bash
-npm run dev
-```
-
-Then open the printed `http://localhost:5173` (or similar) URL.
-
-During local dev:
-
-- `VITE_API_BASE_URL` is typically `http://localhost:5000`.
+- The **frontend** (built `dist/` folder) to a static host like Vercel.
+- The **backend** (`server/index.js`) to a Node host like Render.
 
 ---
 
-## 7. Deployment setup
+## API Overview
 
-### 7.1 Frontend on Vercel
+Base URL is defined by `VITE_API_BASE_URL` on the frontend:
 
+- Local: `http://localhost:5000`
+- Production: e.g. `https://streamsflex.onrender.com`
 
-## 8. Usage guide
+### Core endpoints
 
-### 8.1 Uploading a video
+- **GET `/api/health`**  
+  Health check; returns `{ "status": "ok" }`.
 
-1. Go to the **Upload** page.
-2. Fill in:
-   - Title
-   - Description
-   - Uploader name (optional)
-3. Select a **video file** (there is a client-side max size check to avoid huge, extremely slow uploads).
-4. Optionally pick a **thumbnail image**:
-   - If you skip this, ImageKit will generate a first-frame thumbnail.
-5. Click **Upload**:
-   - You’ll see a **progress indicator** while the file uploads.
-   - On success, you are navigated back to the home page and the new video appears.
+- **GET `/api/videos`**  
+  Returns a list of all videos (newest first).
 
-### 8.2 Watching a video
+- **POST `/api/videos`**  
+  Upload a new video.
+  - `multipart/form-data` with:
+    - `video`: required file.
+    - `thumbnail`: optional file.
+    - `title`: required string.
+    - `description`: required string.
+    - `uploader`: optional string.
 
-1. On the home/discover page, click a video card.
-2. On the **Watch** page:
-   - Views and duration are shown.
-   - The custom player lets you:
-     - Click on the video or center button to play/pause.
-     - Drag the bottom seek bar to jump in the video.
-     - Adjust volume and playback speed.
-     - Click the fullscreen arrow to enter/exit fullscreen.
+- **POST `/api/videos/:id/view`**  
+  Increment views and device analytics for a video.  
+  Body: `{ "device": "desktop" | "tablet" | "mobile" }`.
 
-### 8.3 Likes & shares
+- **POST `/api/videos/:id/duration`**  
+  Persist the rounded duration (in seconds) once the player knows it.  
+  Body: `{ "duration": number }`.
 
-- Click **Like** to increment the like counter for a video (saved in MongoDB).
-- Click **Share**:
-  - Use native share on mobile if supported.
-  - Or share via WhatsApp, X, or copy the link.
-  - Shared link opens the `Watch` page directly for that video.
+- **POST `/api/videos/:id/like`**  
+  Increment the like count for a video.
 
-### 8.4 Admin dashboard
-
-- The **Admin** page uses real data from MongoDB:
-  - Total views
-  - Device breakdown
-  - Video performance
-  - (Based on whatever metrics you’ve wired inside `Admin.tsx`)
+- **GET `/`**  
+  Returns `"Streamsflex API is running"` – useful to confirm backend is alive.
 
 ---
 
-## 9. Notes about ImageKit video processing units
+## Contributing
 
-- ImageKit charges **video processing units** for dynamic video processing (e.g. `?tr=` transformations, transcoding, etc.).
-- Once monthly units are **exhausted**, some transformed video URLs may fail, especially on mobile/tablet if they use device-specific transformations.
-- To keep playback reliable even when units are exhausted:
-  - `deviceUtils.getTransformedUrl` currently **returns the original video URL**, without `tr=` query params.
-  - This avoids per-request processing and makes streaming more predictable.
+This project is currently developed and maintained by a single owner, but the structure is kept simple so it can be extended easily.
 
-If you upgrade your ImageKit plan and want more advanced video transformations (different crops per device, HLS, etc.), you can re-enable transformation logic in `deviceUtils.ts`.
+- **If you fork or extend it**:
+  - Keep changes focused and documented.
+  - Update env variable sections if you add new external services.
+  - Prefer small, well‑named components and clear TypeScript types.
 
----
-
-## 10. Scripts
-
-From `package.json` (names may vary slightly):
-
-- `npm run dev` – start Vite dev server (frontend).
-- `npm run build` – build production frontend.
-- `npm run preview` – preview built frontend.
-- `npm run server` – start backend: `node server/index.js`.
+- **Good areas to improve**:
+  - Richer analytics and charts on the admin dashboard.
+  - Better error messages and retry flows around uploads.
+  - Accessibility and keyboard navigation in the custom video player.
 
 ---
 
-## 11. Future improvements (ideas)
+## Contact
 
-- Authentication / user accounts to tie uploads and likes to real users.
-- Comments per video.
-- Advanced analytics dashboards (retention, avg watch time, etc.).
-- HLS/DASH streaming with adaptive bitrate.
-- Better error pages and 404 handling on frontend.
+**Developed by:** Gaurav Jain  
+**Email:** [jaingaurav906@gmail.com](mailto:jaingaurav906@gmail.com)  
+**LinkedIn:** [linkedin.com/in/this-is-gaurav-jain/](https://www.linkedin.com/in/this-is-gaurav-jain/)  
+**GitHub:** [github.com/gauravjain0377](https://github.com/gauravjain0377)  
+**𝕏:** [x.com/gauravjain0377](https://x.com/gauravjain0377)
 
-This README should give you and contributors a clear map of how Streamsflex works and how to run and deploy it end-to-end.
+---
+
+## Future Enhancements
+
+- **Authentication & user profiles**
+  - Secure login, per‑user libraries, and creator dashboards.
+
+- **Comments and community**
+  - Threaded comments, replies, and moderation tools.
+
+- **Advanced streaming**
+  - HLS/DASH with adaptive bitrate and better start times on slow networks.
+
+- **Discovery & SEO**
+  - Search, tags, categories, and rich link previews (Open Graph / social cards).
+
+- **Operational tooling**
+  - Detailed analytics (retention, watch time per device).
+  - Admin controls for flagging and managing content.
+
+Crafted for developers and creators who value speed, control, and a polished viewing experience.
+
+
