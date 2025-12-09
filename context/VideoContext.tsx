@@ -8,6 +8,7 @@ interface VideoContextType {
   incrementView: (id: string, device: 'desktop' | 'tablet' | 'mobile') => void;
   getVideoById: (id: string) => Video | undefined;
   updateVideo: (video: Video) => void;
+  deleteVideo: (id: string) => Promise<void>;
 }
 
 const VideoContext = createContext<VideoContextType | undefined>(undefined);
@@ -91,8 +92,34 @@ export const VideoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     return videos.find(v => v._id === id);
   }, [videos]);
 
+  const deleteVideo = useCallback(async (id: string) => {
+    try {
+      const res = await fetch(apiUrl(`/api/videos/${id}`), {
+        method: 'DELETE'
+      });
+
+      if (res.ok || res.status === 204) {
+        // Remove from UI only when backend delete succeeded
+        setVideos(prev => prev.filter(v => v._id !== id));
+      } else {
+        console.error('Failed to delete video on backend', res.status);
+      }
+    } catch (err) {
+      console.error('Failed to delete video on backend', err);
+    }
+  }, []);
+
   return (
-    <VideoContext.Provider value={{ videos, addVideo, incrementView, getVideoById, updateVideo }}>
+    <VideoContext.Provider
+      value={{
+        videos,
+        addVideo,
+        incrementView,
+        getVideoById,
+        updateVideo,
+        deleteVideo
+      }}
+    >
       {children}
     </VideoContext.Provider>
   );

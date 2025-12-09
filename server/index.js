@@ -3,7 +3,7 @@ import cors from 'cors';
 import multer from 'multer';
 import mongoose from 'mongoose';
 import dotenv from 'dotenv';
-import ImageKit from 'imagekit';
+import { v2 as cloudinary } from 'cloudinary';
 
 dotenv.config();
 
@@ -22,15 +22,19 @@ mongoose
   .then(() => console.log('MongoDB connected'))
   .catch((err) => console.error('MongoDB connection error', err));
 
-// --- ImageKit setup ---
-if (!process.env.IMAGEKIT_PUBLIC_KEY || !process.env.IMAGEKIT_PRIVATE_KEY || !process.env.IMAGEKIT_URL_ENDPOINT) {
-  console.warn('ImageKit environment variables are not fully set. Uploads will fail until they are configured.');
+// --- Cloudinary setup ---
+if (
+  !process.env.CLOUDINARY_CLOUD_NAME ||
+  !process.env.CLOUDINARY_API_KEY ||
+  !process.env.CLOUDINARY_API_SECRET
+) {
+  console.warn('Cloudinary environment variables are not fully set. Uploads will fail until they are configured.');
 }
 
-const imagekit = new ImageKit({
-  publicKey: process.env.IMAGEKIT_PUBLIC_KEY || '',
-  privateKey: process.env.IMAGEKIT_PRIVATE_KEY || '',
-  urlEndpoint: process.env.IMAGEKIT_URL_ENDPOINT || ''
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME || '',
+  api_key: process.env.CLOUDINARY_API_KEY || '',
+  api_secret: process.env.CLOUDINARY_API_SECRET || ''
 });
 
 // --- Multer (in-memory) ---
@@ -59,14 +63,16 @@ const videoSchema = new mongoose.Schema(
   {
     title: { type: String, required: true },
     description: { type: String, required: true },
-    originalUrl: { type: String, required: true }, // ImageKit video URL
-    thumbnailUrl: { type: String, required: true }, // ImageKit image URL
+    originalUrl: { type: String, required: true }, // Cloudinary video URL
+    thumbnailUrl: { type: String, required: true }, // Cloudinary image URL
     uploadedBy: { type: String, required: true },
     createdAt: { type: Date, default: Date.now },
     duration: { type: Number, default: 0 }, // seconds
     size: { type: Number, default: 0 }, // bytes
     likes: { type: Number, default: 0 },
-    analytics: { type: analyticsSchema, default: () => ({}) }
+    analytics: { type: analyticsSchema, default: () => ({}) },
+    cloudinaryPublicId: { type: String },           // for video
+    cloudinaryThumbnailPublicId: { type: String }   // for user-uploaded thumbnail
   },
   {
     toJSON: {
@@ -129,37 +135,57 @@ app.post(
         return res.status(400).json({ message: 'Title and description are required' });
       }
 
-      // Upload video to ImageKit
-      const videoUploadResponse = await imagekit.upload({
-        file: videoFile.buffer, // send raw buffer to Node SDK
-        fileName: videoFile.originalname,
-        folder: '/streamflex/videos',
-        useUniqueFileName: true
-      });
+      // 1) Upload raw video file to Cloudinary (as video)
+      const videoUploadResponse = await cloudinary.uploader.upload(
+        `data:${videoFile.mimetype};base64,${videoFile.buffer.toString('base64')}`,
+        {
+          resource_type: 'video',
+          folder: 'streamflex/videos',
+          use_filename: true,
+          unique_filename: true
+        }
+      );
 
+      // 2) Handle thumbnail
       let thumbnailUrl;
+      let thumbnailPublicId;
 
       if (thumbnailFile) {
-        // User-provided thumbnail
-        const thumbUploadResponse = await imagekit.upload({
-          file: thumbnailFile.buffer,
-          fileName: thumbnailFile.originalname,
-          folder: '/streamflex/thumbnails',
-          useUniqueFileName: true
-        });
-        thumbnailUrl = thumbUploadResponse.url;
+        // Case 1: user uploaded a thumbnail image
+        const thumbUploadResponse = await cloudinary.uploader.upload(
+          `data:${thumbnailFile.mimetype};base64,${thumbnailFile.buffer.toString('base64')}`,
+          {
+            folder: 'streamflex/thumbnails',
+            use_filename: true,
+            unique_filename: true,
+            resource_type: 'image'
+          }
+        );
+        thumbnailUrl = thumbUploadResponse.secure_url;
+        thumbnailPublicId = thumbUploadResponse.public_id;
       } else {
-        // Auto thumbnail from first frame (ImageKit convention)
-        thumbnailUrl = `${videoUploadResponse.url}/ik-thumbnail.jpg`;
+        // Case 2: no thumbnail uploaded – use first-second frame from the video
+        thumbnailUrl = cloudinary.url(`${videoUploadResponse.public_id}.jpg`, {
+          resource_type: 'video',
+          secure: true,
+          transformation: [
+            { width: 800, height: 450, crop: 'fill', gravity: 'auto' },
+            { quality: 'auto', fetch_format: 'jpg' },
+            { start_offset: '1' }
+          ]
+        });
       }
 
+      // 3) Store in MongoDB
       const doc = await Video.create({
         title,
         description,
-        originalUrl: videoUploadResponse.url,
+        originalUrl: videoUploadResponse.secure_url, // Cloudinary video URL
         thumbnailUrl,
         uploadedBy: uploader || 'User',
-        size: videoFile.size
+        size: videoFile.size,
+        cloudinaryPublicId: videoUploadResponse.public_id,
+        cloudinaryThumbnailPublicId: thumbnailPublicId
       });
 
       const json = doc.toJSON();
@@ -249,6 +275,49 @@ app.post('/api/videos/:id/like', async (req, res) => {
   } catch (err) {
     console.error('Failed to increment like', err);
     res.status(500).json({ message: 'Failed to increment like' });
+  }
+});
+
+// Delete video (protect only built‑in demo videos)
+app.delete('/api/videos/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const video = await Video.findById(id);
+    if (!video) {
+      return res.status(404).json({ message: 'Video not found' });
+    }
+
+    // Protect only hard‑coded demo videos
+    const protectedUploaders = ['Admin', 'CreatorPro', 'NatureDoc'];
+    if (protectedUploaders.includes(video.uploadedBy)) {
+      return res.status(403).json({ message: 'You are not allowed to delete this video' });
+    }
+
+    // Best-effort delete from Cloudinary if we know the IDs
+    if (video.cloudinaryPublicId) {
+      try {
+        await cloudinary.uploader.destroy(video.cloudinaryPublicId, { resource_type: 'video' });
+      } catch (err) {
+        console.error('Failed to delete Cloudinary video', err);
+      }
+    }
+
+    if (video.cloudinaryThumbnailPublicId) {
+      try {
+        await cloudinary.uploader.destroy(video.cloudinaryThumbnailPublicId, { resource_type: 'image' });
+      } catch (err) {
+        console.error('Failed to delete Cloudinary thumbnail', err);
+      }
+    }
+
+    // Always delete the MongoDB document for non‑protected videos
+    await video.deleteOne();
+
+    return res.status(204).send();
+  } catch (err) {
+    console.error('Failed to delete video', err);
+    res.status(500).json({ message: 'Failed to delete video' });
   }
 });
 

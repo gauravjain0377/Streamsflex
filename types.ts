@@ -24,8 +24,12 @@ export interface Video {
   createdAt: string;
   duration: number; // in seconds
   size: number; // in bytes
-   likes: number;
+  likes: number;
   analytics: VideoAnalytics;
+
+  // Optional Cloudinary identifiers for safe deletion
+  cloudinaryPublicId?: string;
+  cloudinaryThumbnailPublicId?: string;
 }
 
 export interface ChartData {
