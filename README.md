@@ -281,5 +281,7 @@ This project is currently developed and maintained by a single owner, but the st
 - **Operational tooling**
   - Detailed analytics (retention, watch time per device).
   - Admin controls for flagging and managing content.
+ 
+  ---
 
 Crafted for developers and creators who value speed, control, and a polished viewing experience.
