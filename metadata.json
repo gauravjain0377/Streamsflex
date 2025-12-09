@@ -1,0 +1,5 @@
+{
+  "name": "StreamFlex",
+  "description": "Adaptive Video Transformation & Delivery Platform designed to automatically serve optimal video aspect ratios based on device type.",
+  "requestFramePermissions": []
+}
