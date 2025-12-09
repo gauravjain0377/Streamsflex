@@ -63,6 +63,11 @@ export const Upload: React.FC = () => {
         };
 
         xhr.onload = () => {
+          console.log('[Upload] /api/videos response', {
+            status: xhr.status,
+            responseText: xhr.responseText,
+          });
+
           if (xhr.status >= 200 && xhr.status < 300) {
             try {
               const json = JSON.parse(xhr.responseText);
@@ -76,13 +81,17 @@ export const Upload: React.FC = () => {
               const parsed = JSON.parse(xhr.responseText);
               if (parsed?.message) message = parsed.message;
             } catch {
-              // ignore
+              // response is not JSON (HTML error page, etc.)
             }
             reject(new Error(message));
           }
         };
 
         xhr.onerror = () => {
+          console.error('[Upload] Network error during upload', {
+            status: xhr.status,
+            responseText: xhr.responseText,
+          });
           reject(new Error('Network error during upload'));
         };
 
