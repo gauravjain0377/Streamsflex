@@ -252,6 +252,11 @@ app.post('/api/videos/:id/like', async (req, res) => {
   }
 });
 
+// Root route for friendly message
+app.get('/', (_req, res) => {
+  res.send('Streamsflex API is running');
+});
+
 app.listen(PORT, () => {
   console.log(`API server listening on http://localhost:${PORT}`);
 });

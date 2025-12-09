@@ -21,24 +21,12 @@ export const getAspectRatioClass = (device: DeviceType): string => {
 };
 
 export const getTransformedUrl = (originalUrl: string, device: DeviceType): string => {
-  // In a real app, this interacts with ImageKit
-  // Example: https://ik.imagekit.io/id/video.mp4?tr=ar-16-9
-  
-  let transformation = '';
-  switch (device) {
-    case DeviceType.MOBILE:
-      transformation = 'tr=ar-9-16';
-      break;
-    case DeviceType.TABLET:
-      transformation = 'tr=ar-4-3';
-      break;
-    case DeviceType.DESKTOP:
-    default:
-      transformation = 'tr=ar-16-9';
-      break;
-  }
-
-  // Check if URL already has query params
-  const separator = originalUrl.includes('?') ? '&' : '?';
-  return `${originalUrl}${separator}${transformation}`;
+  // IMPORTANT:
+  // We intentionally return the *original* URL without extra `tr=` transformations.
+  // Reason: ImageKit charges "video processing units" for on-the-fly transformed video.
+  // When those units are exhausted, transformed URLs can fail (especially on mobile/tablet),
+  // causing the video not to load. Serving the original URL keeps playback reliable.
+  // If you later upgrade your ImageKit plan and want device-specific crops again,
+  // we can re-enable the transformation logic here.
+  return originalUrl;
 };
