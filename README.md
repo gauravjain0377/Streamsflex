@@ -1,8 +1,8 @@
 ## Streamsflex
 
-Premium, responsive, and creator‑focused video streaming platform — built with React, Node.js, MongoDB, and ImageKit.
+Premium, responsive, and creator‑focused video streaming platform — built with React, Node.js, MongoDB, and Cloudinary.
 
-Streamsflex lets you upload long‑form videos once and deliver them seamlessly across desktop, tablet, and mobile with a YouTube‑style experience: custom player, instant thumbnails, watch analytics, likes, and a focused admin dashboard. The project is structured as a single repository containing both the **frontend (Vite + React + TypeScript)** and the **backend (Express + MongoDB + ImageKit)** so it can be developed and deployed end‑to‑end with minimal friction.
+Streamsflex lets you upload long‑form videos once and deliver them seamlessly across desktop, tablet, and mobile with a YouTube‑style experience: custom player, instant thumbnails, watch analytics, likes, and a focused admin dashboard. The project is structured as a single repository containing both the **frontend (Vite + React + TypeScript)** and the **backend (Express + MongoDB + Cloudinary)** so it can be developed and deployed end‑to‑end with minimal friction.
 
 ---
 
@@ -18,7 +18,6 @@ Streamsflex lets you upload long‑form videos once and deliver them seamlessly 
 - **[Running](#running)**
 - **[API Overview](#api-overview)**
 - **[Contributing](#contributing)**
-- **[License](#license)**
 - **[Contact](#contact)**
 - **[Future Enhancements](#future-enhancements)**
 
@@ -31,7 +30,7 @@ Streamsflex is designed for creators and small teams who want to host and share 
 Instead of dealing with raw file storage, transcoding pipelines, and analytics by hand, you:
 
 - Upload a video (and optionally a thumbnail),
-- Let ImageKit handle storage and thumbnails,
+- Let Cloudinary handle video + thumbnail storage,
 - Track real‑time views, devices, likes, and duration in MongoDB,
 - Share clean, stable watch links with your audience,
 - Monitor performance from an integrated admin dashboard.
@@ -44,7 +43,7 @@ The goal is a product‑grade experience that feels familiar to users (similar t
 
 - **Creator‑ready video uploads**
   - Upload videos directly from the browser using a polished upload flow.
-  - Optional thumbnail upload; if none is provided, the first frame is used via ImageKit.
+  - Optional thumbnail upload; if none is provided, the first‑second frame is used via Cloudinary.
   - Only URLs and metadata are stored in MongoDB – no large files in your database.
 
 - **Modern playback experience**
@@ -94,7 +93,7 @@ The goal is a product‑grade experience that feels familiar to users (similar t
   - Node.js + Express (`server/index.js`)
   - MongoDB with Mongoose (`Video` schema + analytics)
   - Multer (in‑memory) for `multipart/form-data` uploads
-  - ImageKit Node SDK for video + thumbnail storage
+  - Cloudinary Node SDK for video + thumbnail storage
 
 - **Tooling**
   - Vite dev server and build pipeline
@@ -105,10 +104,9 @@ The goal is a product‑grade experience that feels familiar to users (similar t
 
 ## Folder Structure
 
-```text
 Streamsflex/
 ├─ server/
-│  └─ index.js            # Express API (MongoDB + ImageKit, uploads, views, likes)
+│  └─ index.js            # Express API (MongoDB + Cloudinary, uploads, views, likes)
 │
 ├─ pages/
 │  ├─ Home.tsx            # Discover / listing page
@@ -132,10 +130,7 @@ Streamsflex/
 ├─ types.ts               # Shared TypeScript types (Video, DeviceType, etc.)
 ├─ constants.ts           # UI constants and breakpoints
 ├─ vite.config.ts         # Vite configuration + local /api proxy
-└─ package.json           # NPM scripts and dependencies
-```
-
----
+└─ package.json           # NPM scripts and dependencies---
 
 ## Installation
 
@@ -143,51 +138,36 @@ Streamsflex/
   - Node.js 18+ (LTS recommended)
   - npm
   - MongoDB instance (Atlas or self‑hosted)
-  - ImageKit account (for video + thumbnail storage)
+  - Cloudinary account (for video + thumbnail storage)
 
 - **Clone**
 
-```bash
 git clone https://github.com/gauravjain0377/Streamsflex.git
-cd Streamsflex
-```
+cd Streamsflex- **Install dependencies (single root project)**
 
-- **Install dependencies (single root project)**
-
-```bash
-npm install
-```
-
----
+npm install---
 
 ## Environment Variables
 
 ### Backend (`.env` at project root, used by `server/index.js`)
 
-```env
 PORT=5000
 
 MONGODB_URI=your-mongodb-connection-string
 
-IMAGEKIT_PUBLIC_KEY=your-imagekit-public-key
-IMAGEKIT_PRIVATE_KEY=your-imagekit-private-key
-IMAGEKIT_URL_ENDPOINT=https://ik.imagekit.io/your_imagekit_id
-```
-
-- **`MONGODB_URI`** – MongoDB Atlas or local connection string.
-- **`IMAGEKIT_*`** – Keys and URL endpoint from the ImageKit dashboard.
+CLOUDINARY_CLOUD_NAME=your-cloudinary-cloud-name
+CLOUDINARY_API_KEY=your-cloudinary-api-key
+CLOUDINARY_API_SECRET=your-cloudinary-api-secret
+**`MONGODB_URI`** – MongoDB Atlas or local connection string.
+- **`CLOUDINARY_*`** – Cloud name, API key, and API secret from the Cloudinary dashboard.
 - **`PORT`** – Optional; defaults to `5000`.
 
 ### Frontend (Vite, e.g. `.env.local`)
 
-```env
-VITE_API_BASE_URL=http://localhost:5000
-```
-
-- In development, point this to your local backend.
+VITE_API_BASE_URL=http://localhost:5000- In development, point this to your local backend.
 - In production, set it to your deployed API, e.g. `https://streamsflex.onrender.com`.
 
-The helper `apiUrl` in `utils/api.ts` uses this value for all network requests.
+The helper `apiUrl` in `utils/api.ts` uses this value (and falls back to relative paths for localhost) for all network requests.
 
 ---
 
@@ -197,24 +177,19 @@ The helper `apiUrl` in `utils/api.ts` uses this value for all network requests.
 
 1. **Start the backend**
 
-   ```bash
+  
    npm run server
-   ```
-
-   - Runs `node server/index.js`.
+      - Runs `node server/index.js`.
    - Verify with `http://localhost:5000/api/health` → `{ "status": "ok" }`.
 
 2. **Start the frontend**
 
    In a second terminal:
 
-   ```bash
+  
    npm run dev
-   ```
-
-   - Vite starts on `http://localhost:5173` (or similar).
-   - Ensure `VITE_API_BASE_URL=http://localhost:5000`.
-
+      - Vite starts on `http://localhost:5173` (or similar).
+   - Ensure `VITE_API_BASE_URL=http://localhost:5000` (or leave it empty to use relative `/api` paths).
 
 In hosted environments, deploy:
 
@@ -308,5 +283,3 @@ This project is currently developed and maintained by a single owner, but the st
   - Admin controls for flagging and managing content.
 
 Crafted for developers and creators who value speed, control, and a polished viewing experience.
-
-
