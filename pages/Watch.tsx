@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useCallback, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useVideos } from '../context/VideoContext';
 import { useDevice } from '../context/DeviceContext';
@@ -8,16 +8,48 @@ import { Share2, ThumbsUp, Eye, Clock } from 'lucide-react';
 export const Watch: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { getVideoById, incrementView } = useVideos();
+  const { getVideoById, incrementView, updateVideo } = useVideos();
   const { deviceType } = useDevice();
   
   const video = getVideoById(id || '');
+  const [displayDuration, setDisplayDuration] = useState<number | null>(video?.duration ?? null);
 
   useEffect(() => {
     if (id) {
       incrementView(id, deviceType);
     }
   }, [id, deviceType, incrementView]);
+
+  const handleDurationKnown = useCallback(
+    (durationSeconds: number) => {
+      if (!id) return;
+      if (!durationSeconds || !Number.isFinite(durationSeconds) || durationSeconds <= 0) return;
+
+      const rounded = Math.round(durationSeconds);
+      setDisplayDuration(rounded);
+      if (video && Math.abs((video.duration || 0) - rounded) < 2) {
+        // Already close enough, skip update
+        return;
+      }
+
+      fetch(`/api/videos/${id}/duration`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ duration: rounded })
+      })
+        .then(async (res) => {
+          if (!res.ok) return;
+          const updated = await res.json();
+          updateVideo(updated);
+        })
+        .catch((err) => {
+          console.error('Failed to update duration', err);
+        });
+    },
+    [id, video, updateVideo]
+  );
 
   if (!video) {
     return (
@@ -36,7 +68,7 @@ export const Watch: React.FC = () => {
   return (
     <div className="max-w-6xl mx-auto space-y-6">
       <div className="w-full bg-card rounded-3xl overflow-hidden shadow-2xl p-4 md:p-6">
-        <VideoPlayer video={video} autoplay={true} />
+        <VideoPlayer video={video} autoplay={true} onDurationKnown={handleDurationKnown} />
         
         <div className="mt-6 space-y-4">
           <h1 className="text-2xl md:text-3xl font-bold text-white">{video.title}</h1>
@@ -49,7 +81,11 @@ export const Watch: React.FC = () => {
               </div>
               <div className="flex items-center space-x-1">
                 <Clock size={18} />
-                <span>{Math.floor(video.duration / 60)} mins</span>
+                <span>
+                  {displayDuration != null
+                    ? `${Math.floor(displayDuration / 60)} mins`
+                    : `${Math.floor((video.duration || 0) / 60)} mins`}
+                </span>
               </div>
             </div>
 

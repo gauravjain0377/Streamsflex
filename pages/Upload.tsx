@@ -1,47 +1,102 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useVideos } from '../context/VideoContext';
 import { Video } from '../types';
-import { SAMPLE_VIDEO_URL, SAMPLE_THUMBNAIL } from '../constants';
 import { UploadCloud, CheckCircle, Loader2 } from 'lucide-react';
 
 export const Upload: React.FC = () => {
   const navigate = useNavigate();
   const { addVideo } = useVideos();
   const [isUploading, setIsUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState<number | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [videoFile, setVideoFile] = useState<File | null>(null);
+  const [thumbnailFile, setThumbnailFile] = useState<File | null>(null);
+  const videoInputRef = useRef<HTMLInputElement | null>(null);
+  const thumbInputRef = useRef<HTMLInputElement | null>(null);
   const [formData, setFormData] = useState({
     title: '',
     description: '',
     uploader: 'User'
   });
 
+  const MAX_FILE_SIZE_MB = 200;
+  const MAX_FILE_SIZE_BYTES = MAX_FILE_SIZE_MB * 1024 * 1024;
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError(null);
+
+    if (!videoFile) {
+      setError('Please select a video file to upload.');
+      return;
+    }
+
+    if (videoFile.size > MAX_FILE_SIZE_BYTES) {
+      setError(`Video is too large. Maximum allowed size is ${MAX_FILE_SIZE_MB}MB.`);
+      return;
+    }
+
     setIsUploading(true);
+    setUploadProgress(0);
 
-    // Simulate network delay and backend processing
-    setTimeout(() => {
-      const newVideo: Video = {
-        _id: Date.now().toString(),
-        title: formData.title,
-        description: formData.description,
-        originalUrl: SAMPLE_VIDEO_URL, // In real app, this comes from ImageKit response
-        thumbnailUrl: SAMPLE_THUMBNAIL,
-        uploadedBy: formData.uploader,
-        createdAt: new Date().toISOString(),
-        duration: Math.floor(Math.random() * 600) + 60,
-        size: 50000000,
-        analytics: {
-          views: 0,
-          devices: { desktop: 0, tablet: 0, mobile: 0 },
-          watchTime: 0
-        }
-      };
+    try {
+      const body = new FormData();
+      body.append('video', videoFile);
+      if (thumbnailFile) {
+        body.append('thumbnail', thumbnailFile);
+      }
+      body.append('title', formData.title);
+      body.append('description', formData.description);
+      body.append('uploader', formData.uploader);
 
-      addVideo(newVideo);
-      setIsUploading(false);
+      const created: Video = await new Promise((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.open('POST', '/api/videos');
+
+        xhr.upload.onprogress = (event) => {
+          if (event.lengthComputable) {
+            const percent = Math.round((event.loaded / event.total) * 100);
+            setUploadProgress(percent);
+          }
+        };
+
+        xhr.onload = () => {
+          if (xhr.status >= 200 && xhr.status < 300) {
+            try {
+              const json = JSON.parse(xhr.responseText);
+              resolve(json as Video);
+            } catch {
+              reject(new Error('Invalid server response'));
+            }
+          } else {
+            let message = 'Upload failed';
+            try {
+              const parsed = JSON.parse(xhr.responseText);
+              if (parsed?.message) message = parsed.message;
+            } catch {
+              // ignore
+            }
+            reject(new Error(message));
+          }
+        };
+
+        xhr.onerror = () => {
+          reject(new Error('Network error during upload'));
+        };
+
+        xhr.send(body);
+      });
+
+      addVideo(created);
       navigate('/');
-    }, 2000);
+    } catch (err: any) {
+      console.error('Upload error', err);
+      setError(err?.message || 'Failed to upload video. Please try again.');
+    } finally {
+      setIsUploading(false);
+      setUploadProgress(null);
+    }
   };
 
   return (
@@ -55,15 +110,61 @@ export const Upload: React.FC = () => {
 
       <div className="bg-card p-6 md:p-8 rounded-2xl border border-slate-800 shadow-xl">
         <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="border-2 border-dashed border-slate-700 rounded-xl p-8 flex flex-col items-center justify-center bg-slate-800/20 hover:bg-slate-800/40 transition-colors cursor-pointer group">
+          <div
+            className="border-2 border-dashed border-slate-700 rounded-xl p-8 flex flex-col items-center justify-center bg-slate-800/20 hover:bg-slate-800/40 transition-colors cursor-pointer group"
+            onClick={() => videoInputRef.current?.click()}
+          >
             <div className="w-16 h-16 bg-primary/20 text-primary rounded-full flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
               <UploadCloud size={32} />
             </div>
             <p className="text-slate-300 font-medium">Click to upload or drag and drop</p>
-            <p className="text-slate-500 text-sm mt-1">MP4, MOV up to 2GB</p>
+            <p className="text-slate-500 text-sm mt-1">MP4, MOV up to 200 MB</p>
+            {videoFile && (
+              <p className="text-slate-400 text-xs mt-3">
+                Selected video: <span className="font-medium text-slate-200">{videoFile.name}</span>
+              </p>
+            )}
+            <input
+              ref={videoInputRef}
+              type="file"
+              accept="video/mp4,video/quicktime"
+              className="hidden"
+              onChange={(e) => {
+                const file = e.target.files?.[0] || null;
+                setVideoFile(file);
+                setError(null);
+              }}
+            />
           </div>
 
           <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-300 mb-1">
+                Thumbnail Image (optional)
+              </label>
+              <div
+                className="w-full bg-slate-900 border border-slate-700 rounded-lg px-4 py-3 text-slate-300 text-sm flex items-center justify-between cursor-pointer hover:border-primary transition-colors"
+                onClick={() => thumbInputRef.current?.click()}
+              >
+                <span>
+                  {thumbnailFile ? `Selected thumbnail: ${thumbnailFile.name}` : 'Click to select an image'}
+                </span>
+                <span className="text-xs text-slate-500 ml-4">
+                  If not provided, first second of the video will be used.
+                </span>
+              </div>
+              <input
+                ref={thumbInputRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0] || null;
+                  setThumbnailFile(file);
+                }}
+              />
+            </div>
+
             <div>
               <label className="block text-sm font-medium text-slate-300 mb-1">Video Title</label>
               <input
@@ -118,6 +219,16 @@ export const Upload: React.FC = () => {
                 </>
               )}
             </button>
+            {typeof uploadProgress === 'number' && (
+              <p className="text-slate-400 text-xs mt-2">
+                Uploading... {uploadProgress}%
+              </p>
+            )}
+            {error && (
+              <p className="text-red-400 text-sm mt-3">
+                {error}
+              </p>
+            )}
           </div>
         </form>
       </div>
