@@ -18,6 +18,7 @@ export const MOCK_VIDEOS_INITIAL = [
     createdAt: new Date().toISOString(),
     duration: 596,
     size: 45000000,
+    likes: 0,
     analytics: {
       views: 1205,
       devices: { desktop: 800, tablet: 200, mobile: 205 },
@@ -34,6 +35,7 @@ export const MOCK_VIDEOS_INITIAL = [
     createdAt: new Date(Date.now() - 86400000).toISOString(),
     duration: 320,
     size: 25000000,
+    likes: 0,
     analytics: {
       views: 850,
       devices: { desktop: 300, tablet: 150, mobile: 400 },
@@ -50,6 +52,7 @@ export const MOCK_VIDEOS_INITIAL = [
     createdAt: new Date(Date.now() - 172800000).toISOString(),
     duration: 1200,
     size: 105000000,
+    likes: 0,
     analytics: {
       views: 3200,
       devices: { desktop: 1500, tablet: 800, mobile: 900 },

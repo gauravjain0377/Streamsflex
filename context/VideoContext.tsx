@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import { Video, VideoAnalytics } from '../types';
+import { apiUrl } from '../utils/api';
 
 interface VideoContextType {
   videos: Video[];
@@ -25,7 +26,7 @@ export const VideoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   useEffect(() => {
     const loadFromApi = async () => {
       try {
-        const res = await fetch('/api/videos');
+        const res = await fetch(apiUrl('/api/videos'));
         if (!res.ok) return;
         const data: Video[] = await res.json();
         if (Array.isArray(data)) {
@@ -67,7 +68,7 @@ export const VideoProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     }));
 
     // Persist to backend
-    fetch(`/api/videos/${id}/view`, {
+    fetch(apiUrl(`/api/videos/${id}/view`), {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'

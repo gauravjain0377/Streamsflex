@@ -24,6 +24,7 @@ export interface Video {
   createdAt: string;
   duration: number; // in seconds
   size: number; // in bytes
+   likes: number;
   analytics: VideoAnalytics;
 }
 

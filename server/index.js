@@ -65,6 +65,7 @@ const videoSchema = new mongoose.Schema(
     createdAt: { type: Date, default: Date.now },
     duration: { type: Number, default: 0 }, // seconds
     size: { type: Number, default: 0 }, // bytes
+    likes: { type: Number, default: 0 },
     analytics: { type: analyticsSchema, default: () => ({}) }
   },
   {
@@ -229,6 +230,30 @@ app.post('/api/videos/:id/duration', async (req, res) => {
   }
 });
 
+// Increment likes
+app.post('/api/videos/:id/like', async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const video = await Video.findById(id);
+    if (!video) {
+      return res.status(404).json({ message: 'Video not found' });
+    }
+
+    video.likes = (video.likes || 0) + 1;
+
+    await video.save();
+
+    const json = video.toJSON();
+    res.json(json);
+  } catch (err) {
+    console.error('Failed to increment like', err);
+    res.status(500).json({ message: 'Failed to increment like' });
+  }
+});
+
 app.listen(PORT, () => {
   console.log(`API server listening on http://localhost:${PORT}`);
 });
+
+

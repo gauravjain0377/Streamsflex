@@ -1,6 +1,7 @@
 import React, { useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useVideos } from '../context/VideoContext';
+import { apiUrl } from '../utils/api';
 import { Video } from '../types';
 import { UploadCloud, CheckCircle, Loader2 } from 'lucide-react';
 
@@ -52,7 +53,7 @@ export const Upload: React.FC = () => {
 
       const created: Video = await new Promise((resolve, reject) => {
         const xhr = new XMLHttpRequest();
-        xhr.open('POST', '/api/videos');
+        xhr.open('POST', apiUrl('/api/videos'));
 
         xhr.upload.onprogress = (event) => {
           if (event.lengthComputable) {

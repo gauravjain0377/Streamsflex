@@ -1,9 +1,10 @@
 import React, { useEffect, useCallback, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useVideos } from '../context/VideoContext';
+import { apiUrl } from '../utils/api';
 import { useDevice } from '../context/DeviceContext';
 import { VideoPlayer } from '../components/VideoPlayer';
-import { Share2, ThumbsUp, Eye, Clock } from 'lucide-react';
+import { Share2, ThumbsUp, Eye, Clock, X as Close } from 'lucide-react';
 
 export const Watch: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -13,6 +14,9 @@ export const Watch: React.FC = () => {
   
   const video = getVideoById(id || '');
   const [displayDuration, setDisplayDuration] = useState<number | null>(video?.duration ?? null);
+  const [isShareOpen, setIsShareOpen] = useState(false);
+  const [isLiking, setIsLiking] = useState(false);
+  const [copyMessage, setCopyMessage] = useState<string | null>(null);
 
   useEffect(() => {
     if (id) {
@@ -32,7 +36,7 @@ export const Watch: React.FC = () => {
         return;
       }
 
-      fetch(`/api/videos/${id}/duration`, {
+      fetch(apiUrl(`/api/videos/${id}/duration`), {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'
@@ -50,6 +54,68 @@ export const Watch: React.FC = () => {
     },
     [id, video, updateVideo]
   );
+
+  const handleLike = async () => {
+    if (!video || isLiking) return;
+    setIsLiking(true);
+
+    // Optimistic update
+    updateVideo({ ...video, likes: (video.likes || 0) + 1 });
+
+    try {
+      const res = await fetch(apiUrl(`/api/videos/${video._id}/like`), {
+        method: 'POST'
+      });
+      if (res.ok) {
+        const updated = await res.json();
+        updateVideo(updated);
+      }
+    } catch (err) {
+      console.error('Failed to like video', err);
+    } finally {
+      setIsLiking(false);
+    }
+  };
+
+  const shareUrl =
+    typeof window !== 'undefined'
+      ? `${window.location.origin}/#/watch/${video?._id}`
+      : '';
+  const shareText = `${video?.title || 'StreamFlex video'} — watch now on StreamFlex`;
+
+  const handleNativeShare = async () => {
+    if (!shareUrl || !video) return;
+    if ((navigator as any).share) {
+      try {
+        await (navigator as any).share({
+          title: video.title,
+          text: shareText,
+          url: shareUrl
+        });
+      } catch (err) {
+        console.error('Native share cancelled or failed', err);
+      }
+    } else {
+      try {
+        await navigator.clipboard.writeText(shareUrl);
+        setCopyMessage('Link copied to clipboard');
+        setTimeout(() => setCopyMessage(null), 2000);
+      } catch (err) {
+        console.error('Failed to copy link', err);
+      }
+    }
+  };
+
+  const handleCopyLink = async () => {
+    if (!shareUrl) return;
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      setCopyMessage('Link copied to clipboard');
+      setTimeout(() => setCopyMessage(null), 2000);
+    } catch (err) {
+      console.error('Failed to copy link', err);
+    }
+  };
 
   if (!video) {
     return (
@@ -90,11 +156,18 @@ export const Watch: React.FC = () => {
             </div>
 
             <div className="flex items-center space-x-3">
-              <button className="flex items-center space-x-2 bg-slate-800 hover:bg-slate-700 px-4 py-2 rounded-full transition-colors text-white">
+              <button
+                onClick={handleLike}
+                disabled={isLiking}
+                className="flex items-center space-x-2 bg-slate-800 hover:bg-slate-700 px-4 py-2 rounded-full transition-colors text-white disabled:opacity-60 disabled:cursor-not-allowed"
+              >
                 <ThumbsUp size={18} />
-                <span>Like</span>
+                <span>{(video.likes || 0).toLocaleString()} Likes</span>
               </button>
-              <button className="flex items-center space-x-2 bg-primary hover:bg-primary/90 px-4 py-2 rounded-full transition-colors text-white font-medium shadow-lg shadow-primary/25">
+              <button
+                onClick={() => setIsShareOpen(true)}
+                className="flex items-center space-x-2 bg-primary hover:bg-primary/90 px-4 py-2 rounded-full transition-colors text-white font-medium shadow-lg shadow-primary/25"
+              >
                 <Share2 size={18} />
                 <span>Share</span>
               </button>
@@ -136,6 +209,72 @@ export const Watch: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {isShareOpen && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
+          <div className="bg-slate-900 border border-slate-700 rounded-2xl p-6 w-full max-w-md shadow-2xl space-y-4">
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="text-lg font-semibold text-white">Share this video</h3>
+              <button
+                type="button"
+                onClick={() => setIsShareOpen(false)}
+                className="text-slate-400 hover:text-slate-200"
+              >
+                <Close size={18} />
+              </button>
+            </div>
+            <p className="text-slate-400 text-sm">
+              Share with friends on your favourite platforms or copy the link.
+            </p>
+
+            <div className="space-y-3">
+              <button
+                type="button"
+                onClick={handleNativeShare}
+                className="w-full bg-primary hover:bg-primary/90 text-white text-sm font-medium py-2.5 rounded-lg transition-colors"
+              >
+                Share using system share
+              </button>
+
+              <div className="grid grid-cols-2 gap-3 text-sm">
+                <a
+                  href={`https://wa.me/?text=${encodeURIComponent(shareText + ' ' + shareUrl)}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="bg-green-500/10 text-green-400 hover:bg-green-500/20 rounded-lg py-2.5 text-center font-medium transition-colors"
+                >
+                  WhatsApp
+                </a>
+                <a
+                  href={`https://x.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(
+                    shareUrl
+                  )}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="bg-sky-500/10 text-sky-400 hover:bg-sky-500/20 rounded-lg py-2.5 text-center font-medium transition-colors"
+                >
+                  X (Twitter)
+                </a>
+                <button
+                  type="button"
+                  onClick={handleCopyLink}
+                  className="col-span-2 bg-slate-800 hover:bg-slate-700 text-slate-100 rounded-lg py-2.5 text-center font-medium transition-colors"
+                >
+                  Copy link
+                </button>
+              </div>
+
+              <div className="bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-slate-400 break-all">
+                {shareUrl}
+              </div>
+
+              {copyMessage && (
+                <p className="text-xs text-emerald-400 mt-1">{copyMessage}</p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
