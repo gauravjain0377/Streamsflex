@@ -278,49 +278,6 @@ app.post('/api/videos/:id/like', async (req, res) => {
   }
 });
 
-// Delete video (protect only built‑in demo videos)
-app.delete('/api/videos/:id', async (req, res) => {
-  try {
-    const { id } = req.params;
-
-    const video = await Video.findById(id);
-    if (!video) {
-      return res.status(404).json({ message: 'Video not found' });
-    }
-
-    // Protect only hard‑coded demo videos
-    const protectedUploaders = ['Admin', 'CreatorPro', 'NatureDoc'];
-    if (protectedUploaders.includes(video.uploadedBy)) {
-      return res.status(403).json({ message: 'You are not allowed to delete this video' });
-    }
-
-    // Best-effort delete from Cloudinary if we know the IDs
-    if (video.cloudinaryPublicId) {
-      try {
-        await cloudinary.uploader.destroy(video.cloudinaryPublicId, { resource_type: 'video' });
-      } catch (err) {
-        console.error('Failed to delete Cloudinary video', err);
-      }
-    }
-
-    if (video.cloudinaryThumbnailPublicId) {
-      try {
-        await cloudinary.uploader.destroy(video.cloudinaryThumbnailPublicId, { resource_type: 'image' });
-      } catch (err) {
-        console.error('Failed to delete Cloudinary thumbnail', err);
-      }
-    }
-
-    // Always delete the MongoDB document for non‑protected videos
-    await video.deleteOne();
-
-    return res.status(204).send();
-  } catch (err) {
-    console.error('Failed to delete video', err);
-    res.status(500).json({ message: 'Failed to delete video' });
-  }
-});
-
 // Root route for friendly message
 app.get('/', (_req, res) => {
   res.send('Streamsflex API is running');

@@ -9,15 +9,13 @@ import { Share2, ThumbsUp, Eye, Clock, X as Close } from 'lucide-react';
 export const Watch: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { getVideoById, incrementView, updateVideo, deleteVideo } = useVideos();
+  const { getVideoById, incrementView, updateVideo } = useVideos();
   const { deviceType } = useDevice();
   
   const video = getVideoById(id || '');
   const [displayDuration, setDisplayDuration] = useState<number | null>(video?.duration ?? null);
   const [isShareOpen, setIsShareOpen] = useState(false);
   const [isLiking, setIsLiking] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
-  const [isDeleteOpen, setIsDeleteOpen] = useState(false); // NEW
   const [copyMessage, setCopyMessage] = useState<string | null>(null);
 
   useEffect(() => {
@@ -77,31 +75,6 @@ export const Watch: React.FC = () => {
     } finally {
       setIsLiking(false);
     }
-  };
-
-  // Open pretty delete modal instead of browser alert
-  const handleDelete = () => {
-    if (!video || !id || isDeleting) return;
-    setIsDeleteOpen(true);
-  };
-
-  const handleConfirmDelete = async () => {
-    if (!video || !id || isDeleting) return;
-
-    try {
-      setIsDeleting(true);
-      await deleteVideo(id);
-      setIsDeleteOpen(false);
-      navigate('/');
-    } catch (err) {
-      console.error('Failed to delete video', err);
-      setIsDeleting(false);
-    }
-  };
-
-  const handleCancelDelete = () => {
-    if (isDeleting) return;
-    setIsDeleteOpen(false);
   };
 
   const shareUrl =
@@ -198,16 +171,6 @@ export const Watch: React.FC = () => {
                 <Share2 size={18} />
                 <span>Share</span>
               </button>
-
-              {video.cloudinaryPublicId && (
-                <button
-                  onClick={handleDelete}
-                  disabled={isDeleting}
-                  className="flex items-center space-x-2 bg-red-600 hover:bg-red-700 px-4 py-2 rounded-full transition-colors text-white font-medium disabled:opacity-60 disabled:cursor-not-allowed"
-                >
-                  <span>{isDeleting ? 'Deleting...' : 'Delete'}</span>
-                </button>
-              )}
             </div>
           </div>
 
@@ -308,47 +271,6 @@ export const Watch: React.FC = () => {
               {copyMessage && (
                 <p className="text-xs text-emerald-400 mt-1">{copyMessage}</p>
               )}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* NEW: Delete confirmation modal */}
-      {isDeleteOpen && (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50">
-          <div className="bg-slate-900 border border-slate-700 rounded-2xl p-6 w-full max-w-md shadow-2xl space-y-4">
-            <div className="flex items-center justify-between mb-2">
-              <h3 className="text-lg font-semibold text-white">Delete this video?</h3>
-              <button
-                type="button"
-                onClick={handleCancelDelete}
-                className="text-slate-400 hover:text-slate-200"
-              >
-                <Close size={18} />
-              </button>
-            </div>
-            <p className="text-slate-400 text-sm">
-              This will permanently delete <span className="text-white font-semibold">{video.title}</span>{' '}
-              from your library. This action cannot be undone.
-            </p>
-
-            <div className="flex justify-end space-x-3 pt-2">
-              <button
-                type="button"
-                onClick={handleCancelDelete}
-                disabled={isDeleting}
-                className="px-4 py-2 rounded-full text-sm font-medium bg-slate-800 hover:bg-slate-700 text-slate-100 disabled:opacity-60 disabled:cursor-not-allowed"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={handleConfirmDelete}
-                disabled={isDeleting}
-                className="px-4 py-2 rounded-full text-sm font-medium bg-red-600 hover:bg-red-700 text-white disabled:opacity-60 disabled:cursor-not-allowed"
-              >
-                {isDeleting ? 'Deleting...' : 'Delete permanently'}
-              </button>
             </div>
           </div>
         </div>
